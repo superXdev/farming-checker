@@ -22,15 +22,15 @@ const aWeb3 = new Web3('https://api.avax.network/ext/bc/C/rpc');
 	log("====================================")
 	log(`|| ${chalk.green("Position.exchange")}`)
 	log("====================================")
-	log(`Price POSI : ${formatter.format(posiPrice)} IDR`)
-	await showTotalEarnPosi(env.POSI_ADDRESS, posiPrice)
+	log(`Price POSI : ${formatter.format(posiPrice.idr)} IDR (${changePrice(posiPrice.idr_24h_change)})`)
+	await showTotalEarnPosi(env.POSI_ADDRESS, posiPrice.idr)
 
 	log("\n====================================")
 	log(`|| ${chalk.magenta('HurricaneSwap')}`)
 	log("====================================")
-	log(`Price HCT  : ${formatter.format(hurricanePrice)} IDR`)
+	log(`Price HCT  : ${formatter.format(hurricanePrice.idr)} IDR (${changePrice(hurricanePrice.idr_24h_change)})`)
 	log('------------------------------------')
-	log(`Total Earn : ${chalk.yellow(fromWei(hurricaneEarn[0]))} HCT (Rp.${totalIdr(hurricaneEarn[0], hurricanePrice)})`)
+	log(`Total Earn : ${chalk.yellow(fromWei(hurricaneEarn[0]))} HCT (Rp.${totalIdr(hurricaneEarn[0], hurricanePrice.idr)})`)
 })();
 
 function fromWei(amount) {
@@ -41,16 +41,18 @@ async function getPosiPrice() {
 	let price = await CoinGeckoClient.simple.price({
 	    ids: 'position-token',
 	    vs_currencies: 'idr',
+	    include_24hr_change: true
 	});
-	return price.data['position-token'].idr;
+	return price.data['position-token'];
 }
 
 async function getHurricanePrice() {
 	let price = await CoinGeckoClient.simple.price({
 	    ids: 'hurricaneswap-token',
 	    vs_currencies: 'idr',
+	    include_24hr_change: true
 	});
-	return price.data['hurricaneswap-token'].idr;
+	return price.data['hurricaneswap-token'];
 }
 
 function totalIdr(balance, price) {
@@ -77,4 +79,10 @@ async function showTotalEarnPosi(acc, posiPrice) {
 
 		log(`Total Earn : ${chalk.yellow(fromWei(posiEarn))} POSI (Rp.${totalIdr(posiEarn, posiPrice)})`)
 	}
+}
+
+function changePrice(price) {
+	price = Math.round(price)
+
+	return (price < 0) ? chalk.red(price+'%') : chalk.green(price+'%')
 }
