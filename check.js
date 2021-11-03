@@ -8,28 +8,29 @@ const hurricaneABI = require('./abi/hurricane.json');
 const env = process.env;
 const log = console.log;
 const CoinGeckoClient = new CoinGecko();
+const formatter = new Intl.NumberFormat('en-US');
 const web3 = new Web3('https://bsc-dataseed4.defibit.io/');
 const aWeb3 = new Web3('https://api.avax.network/ext/bc/C/rpc');
 
 (async function() {
-	const posi = new web3.eth.Contract(posiABI, env.POSI_CONTRACT_ADDRESS)
 	const hurricane = new aWeb3.eth.Contract(hurricaneABI, env.HURRICANE_CONTRACT_ADDRESS)
 
-	const posiEarn = await posi.methods.pendingPosition(0, env.POSI_ADDRESS).call()
 	const hurricaneEarn = await hurricane.methods.pending(18, env.HURRICANE_ADDRESS).call()
 	const hurricanePrice = await getHurricanePrice()
 	const posiPrice = await getPosiPrice()
 
-	log("=============================")
+	log("====================================")
 	log(`|| ${chalk.green("Position.exchange")}`)
-	log("=============================")
-	log(`Total Earn : ${chalk.yellow(fromWei(posiEarn))} POSI (Rp.${totalIdr(posiEarn, posiPrice)})`)
-	log(`Price POSI : ${posiPrice} IDR`)
-	log("=============================")
+	log("====================================")
+	log(`Price POSI : ${formatter.format(posiPrice)} IDR`)
+	await showTotalEarnPosi(env.POSI_ADDRESS, posiPrice)
+
+	log("\n====================================")
 	log(`|| ${chalk.magenta('HurricaneSwap')}`)
-	log("=============================")
+	log("====================================")
+	log(`Price HCT  : ${formatter.format(hurricanePrice)} IDR`)
+	log('------------------------------------')
 	log(`Total Earn : ${chalk.yellow(fromWei(hurricaneEarn[0]))} HCT (Rp.${totalIdr(hurricaneEarn[0], hurricanePrice)})`)
-	log(`Price HCT  : ${hurricanePrice} IDR`)
 })();
 
 function fromWei(amount) {
@@ -53,9 +54,27 @@ async function getHurricanePrice() {
 }
 
 function totalIdr(balance, price) {
-	const formatter = new Intl.NumberFormat('en-US');
-
 	return formatter.format(
-		Math.round(parseFloat(fromWei(balance))*price)
+		(price) ? Math.round(parseFloat(fromWei(balance))*price) : Math.round(parseFloat(fromWei(balance)))
 	);
+}
+
+async function showTotalEarnPosi(acc, posiPrice) {
+	let posiEarn = ""
+	const accounts = acc.split("|")
+	const posi = new web3.eth.Contract(posiABI, env.POSI_CONTRACT_ADDRESS)
+
+	if(accounts.length > 1) {
+		for(let address of accounts) {
+			posiEarn = await posi.methods.pendingPosition(0, address).call()
+
+			log('------------------------------------')
+			log(`Address    : ${address.substring(0,12)}....${address.substring(36,42)}`)
+			log(`Total Earn : ${chalk.yellow(fromWei(posiEarn))} POSI (Rp.${totalIdr(posiEarn, posiPrice)})`)
+		}
+	} else {
+		posiEarn = await posi.methods.pendingPosition(0, env.POSI_ADDRESS).call()
+
+		log(`Total Earn : ${chalk.yellow(fromWei(posiEarn))} POSI (Rp.${totalIdr(posiEarn, posiPrice)})`)
+	}
 }
